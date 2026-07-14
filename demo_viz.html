@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Audit Trail — Demo Dynamics</title>
+<style>
+  :root {
+    --bg: #eef2f3;
+    --panel: #ffffff;
+    --panel2: #f5f8f9;
+    --ink: #17232d;
+    --muted: #5b6c79;
+    --line: #d3dde2;
+    --accent: #0d8a84;
+    --accent-soft: rgba(13,138,132,.12);
+    --amber: #b97a1f;
+    --good: #1e9e63;
+    --bad: #d9414a;
+    --pulse-rec: #0d8a84;
+    --pulse-msg: #7a6cc9;
+    --shadow: 0 1px 2px rgba(23,35,45,.06), 0 8px 24px rgba(23,35,45,.07);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Avenir Next", Seravek, system-ui, -apple-system, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e141b; --panel: #151d26; --panel2: #1a2430;
+      --ink: #d9e3eb; --muted: #8da0af; --line: #263341;
+      --accent: #3fc9c2; --accent-soft: rgba(63,201,194,.13);
+      --amber: #e5a43b; --good: #4cc38a; --bad: #e5484d;
+      --pulse-rec: #3fc9c2; --pulse-msg: #9d8ff2;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e141b; --panel: #151d26; --panel2: #1a2430;
+    --ink: #d9e3eb; --muted: #8da0af; --line: #263341;
+    --accent: #3fc9c2; --accent-soft: rgba(63,201,194,.13);
+    --amber: #e5a43b; --good: #4cc38a; --bad: #e5484d;
+    --pulse-rec: #3fc9c2; --pulse-msg: #9d8ff2;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef2f3; --panel: #ffffff; --panel2: #f5f8f9;
+    --ink: #17232d; --muted: #5b6c79; --line: #d3dde2;
+    --accent: #0d8a84; --accent-soft: rgba(13,138,132,.12);
+    --amber: #b97a1f; --good: #1e9e63; --bad: #d9414a;
+    --pulse-rec: #0d8a84; --pulse-msg: #7a6cc9;
+    --shadow: 0 1px 2px rgba(23,35,45,.06), 0 8px 24px rgba(23,35,45,.07);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.5;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  header { margin-bottom: 18px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+  }
+  h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; text-wrap: balance; }
+  .sub { color: var(--muted); font-size: 15px; max-width: 68ch; margin: 0; }
+
+  .stage-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .stage-scroll { overflow-x: auto; }
+  svg#stage { display: block; min-width: 900px; width: 100%; height: auto; }
+
+  /* ---- SVG element styles ---- */
+  .node { fill: var(--panel2); stroke: var(--line); rx: 8; }
+  .node-title { font: 600 13px var(--sans); fill: var(--ink); }
+  .node-sub { font: 10.5px var(--mono); fill: var(--muted); }
+  .band-label { font: 600 10px var(--mono); fill: var(--muted); letter-spacing: .12em; }
+  .wire { fill: none; stroke: var(--line); stroke-width: 1.3; stroke-dasharray: 3 4; }
+  .agent-row { fill: transparent; stroke: var(--line); }
+  .agent-row.active { fill: var(--accent-soft); stroke: var(--accent); }
+  .agent-name { font: 500 12px var(--mono); fill: var(--ink); }
+  .stagechip { fill: var(--panel); stroke: var(--line); }
+  .stagechip.lit { fill: var(--accent-soft); stroke: var(--accent); }
+  .stagechip-t { font: 10.5px var(--mono); fill: var(--muted); }
+  .stagechip.lit + .stagechip-t, .stagechip-t.lit { fill: var(--accent); }
+  .blk { stroke-width: 1.4; }
+  .blk-batch { fill: var(--accent-soft); stroke: var(--accent); }
+  .blk-hb { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
+  .blk-gen { fill: var(--panel2); stroke: var(--line); }
+  .blk-t1 { font: 600 11px var(--mono); fill: var(--ink); }
+  .blk-t2 { font: 9.5px var(--mono); fill: var(--muted); }
+  .counter { font: 600 15px var(--mono); fill: var(--accent); }
+  .vrow-t { font: 11px var(--mono); }
+  .bc-bg { fill: var(--panel); stroke: var(--accent); stroke-width: 1.2; }
+  .bc-head { font: 600 10.5px var(--mono); fill: var(--accent); }
+  .bc-line { font: 10px var(--mono); fill: var(--ink); }
+  .bc-dim { font: 10px var(--mono); fill: var(--muted); }
+  .doc { fill: var(--panel2); stroke: var(--line); stroke-width: 1.2; }
+  .doc-t { font: 10px var(--mono); fill: var(--muted); }
+  .badge-t { font: 700 13px var(--mono); }
+  .hl { transition: opacity .2s; }
+  .timer-ring { fill: none; stroke: var(--accent); stroke-width: 3; opacity: .9; }
+  .timer-bg { fill: none; stroke: var(--line); stroke-width: 3; }
+
+  /* ---- controls ---- */
+  .controls {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; border-top: 1px solid var(--line); background: var(--panel);
+  }
+  button.ctl {
+    font: 600 13px var(--sans); color: var(--ink); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 14px; cursor: pointer;
+  }
+  button.ctl:hover { border-color: var(--accent); color: var(--accent); }
+  button.ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.ctl.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); min-width: 86px; }
+  .timebox { font: 600 13px var(--mono); color: var(--muted); min-width: 84px; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    flex: 1; min-width: 180px; accent-color: var(--accent); height: 22px;
+  }
+  .phases { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+  .phase {
+    font: 500 11px var(--mono); color: var(--muted); border: 1px solid var(--line);
+    border-radius: 99px; padding: 3px 10px; cursor: pointer; background: transparent;
+  }
+  .phase.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+  /* ---- ticker ---- */
+  .ticker {
+    margin-top: 16px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; box-shadow: var(--shadow); padding: 12px 16px;
+    font-family: var(--mono); font-size: 12.5px; min-height: 108px;
+  }
+  .ticker-line { color: var(--muted); padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticker-line.now { color: var(--ink); }
+  .ticker-line.now::before { content: "▸ "; color: var(--accent); }
+  .ticker-line .tt { color: var(--accent); margin-right: 8px; }
+  .ticker-line.good { color: var(--good); }
+  .ticker-line.bad { color: var(--bad); }
+
+  /* ---- explainer grid ---- */
+  h2 { font-size: 17px; font-weight: 600; margin: 34px 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 2px; font-size: 13.5px; font-weight: 600; }
+  .card .file { font: 10.5px var(--mono); color: var(--accent); margin-bottom: 6px; }
+  .card .file a { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+  .card p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .foot {
+    margin-top: 28px; color: var(--muted); font-size: 13px;
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+  .foot code { font-family: var(--mono); font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) { .hl { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">google-adk-log × AuditLog · live demo replay</div>
+    <h1>How agent actions become a tamper-evident audit trail</h1>
+    <p class="sub">A 30-second replay of the real demo run: three ADK agents investigate an incident;
+      every action is captured by callbacks and sealed into that agent's own signed hash chain
+      each publish cycle — and any log you hand the verifier is proven authentic, or caught.</p>
+  </header>
+
+  <div class="stage-panel">
+    <div class="stage-scroll">
+    <svg id="stage" viewBox="0 0 1320 664" role="img" aria-label="Animated diagram of agents, callbacks, spool, publisher, ingest pipeline, chain, and verification endpoint">
+      <!-- ======== wires (drawn under nodes) ======== -->
+      <g id="wires">
+        <path id="p-triage"   class="wire" d="M238,262 C270,262 268,295 298,297"/>
+        <path id="p-analysis" class="wire" d="M238,314 L298,311"/>
+        <path id="p-report"   class="wire" d="M238,366 C270,366 268,327 298,325"/>
+        <path id="p-cb-logs"  class="wire" d="M448,290 C490,286 476,116 520,110"/>
+        <path id="p-cb-spool" class="wire" d="M448,318 L518,318"/>
+        <path id="p-spool-pub" class="wire" d="M666,318 L716,318"/>
+        <path id="p-pub-ing"  class="wire" d="M844,318 L886,318"/>
+        <path id="p-ing-store" class="wire" d="M980,246 C960,190 900,160 856,132"/>
+        <path id="p-ing-anchor" class="wire" d="M1030,392 C1030,470 760,480 528,506"/>
+        <path id="p-store-doc" class="wire" d="M900,132 C1260,150 1260,210 1260,298"/>
+        <path id="p-doc-ver"  class="wire" d="M1260,348 C1260,430 1248,468 1202,490"/>
+        <path id="p-tdoc-ver" class="wire" d="M1204,524 C1190,526 1184,534 1178,544"/>
+        <path id="p-walrus-ver" class="wire" d="M282,580 C282,650 520,656 758,612"/>
+      </g>
+
+      <!-- ======== top band: durable stores ======== -->
+      <text class="band-label" x="522" y="52">DURABLE STORES</text>
+      <g>
+        <rect class="node" x="520" y="66" width="190" height="66" rx="8"/>
+        <text class="node-title" x="534" y="90">Local logs</text>
+        <text class="node-sub" x="534" y="108">logs/&lt;agent&gt;.jsonl</text>
+        <rect id="hl-logs" class="hl" x="520" y="66" width="190" height="66" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <g>
+        <rect class="node" x="740" y="66" width="200" height="66" rx="8"/>
+        <text class="node-title" x="754" y="90">Cloud storage <tspan class="node-sub">(mock S3)</tspan></text>
+        <text class="node-sub" x="754" y="108">raw signed records · WORM</text>
+        <rect id="hl-store" class="hl" x="740" y="66" width="200" height="66" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <!-- ======== middle band: live pipeline ======== -->
+      <text class="band-label" x="42" y="216">LIVE — EVERY ACTION</text>
+      <g>
+        <rect class="node" x="40" y="230" width="198" height="162" rx="8"/>
+        <text class="node-title" x="54" y="252">ADK agents</text>
+        <rect id="ag-triage" class="agent-row" x="52" y="262" width="174" height="30" rx="6"/>
+        <text class="agent-name" x="64" y="282">agent_0 · triage</text>
+        <rect id="ag-analysis" class="agent-row" x="52" y="298" width="174" height="30" rx="6"/>
+        <text class="agent-name" x="64" y="318">agent_1 · analysis</text>
+        <rect id="ag-report" class="agent-row" x="52" y="334" width="174" height="30" rx="6"/>
+        <text class="agent-name" x="64" y="354">agent_2 · report</text>
+        <text class="node-sub" x="54" y="382">acting in parallel · shared state</text>
+      </g>
+      <g>
+        <rect class="node" x="298" y="272" width="150" height="72" rx="8"/>
+        <text class="node-title" x="312" y="296">ADK callbacks</text>
+        <text class="node-sub" x="312" y="312">before/after: agent,</text>
+        <text class="node-sub" x="312" y="326">model, tool</text>
+        <rect id="hl-cb" class="hl" x="298" y="272" width="150" height="72" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <g>
+        <rect class="node" x="518" y="284" width="148" height="68" rx="8"/>
+        <text class="node-title" x="532" y="306">Spool</text>
+        <text class="node-sub" x="532" y="322">pending.jsonl</text>
+        <text id="spool-n" class="counter" x="532" y="342">0 pending</text>
+        <rect id="hl-spool" class="hl" x="518" y="284" width="148" height="68" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <g>
+        <rect class="node" x="716" y="284" width="128" height="68" rx="8"/>
+        <text class="node-title" x="730" y="306">Publisher</text>
+        <text class="node-sub" x="730" y="322">every minute</text>
+        <circle class="timer-bg" cx="820" cy="330" r="10"/>
+        <circle id="timer" class="timer-ring" cx="820" cy="330" r="10" stroke-dasharray="62.8" stroke-dashoffset="62.8" transform="rotate(-90 820 330)"/>
+        <rect id="hl-pub" class="hl" x="716" y="284" width="128" height="68" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <g>
+        <rect class="node" x="886" y="246" width="314" height="146" rx="8"/>
+        <text class="node-title" x="900" y="268">auditlog ingest</text>
+        <rect id="st-sign" class="stagechip" x="900" y="280" width="138" height="30" rx="6"/>
+        <text id="stt-sign" class="stagechip-t" x="912" y="299">1 · KMS sign</text>
+        <rect id="st-chain" class="stagechip" x="1048" y="280" width="138" height="30" rx="6"/>
+        <text id="stt-chain" class="stagechip-t" x="1060" y="299">2 · hash-chain</text>
+        <rect id="st-merkle" class="stagechip" x="900" y="316" width="138" height="30" rx="6"/>
+        <text id="stt-merkle" class="stagechip-t" x="912" y="335">3 · Merkle root</text>
+        <rect id="st-manifest" class="stagechip" x="1048" y="316" width="138" height="30" rx="6"/>
+        <text id="stt-manifest" class="stagechip-t" x="1060" y="335">4 · manifest ✍</text>
+        <text class="node-sub" x="900" y="374">manifest blob ↔ Sui object · head advances to the new tail</text>
+      </g>
+
+      <!-- ======== bottom band: walrus ⛓ sui anchored chain + verification ======== -->
+      <text class="band-label" x="42" y="424">ANCHORED — PUBLISHED DIGEST CHAIN</text>
+      <g>
+        <rect class="node" x="42" y="438" width="480" height="142" rx="10"/>
+        <text class="node-title" x="56" y="458">Sui &amp; Walrus <tspan class="node-sub">blob ↔ Sui object · one prev-linked trail per agent</tspan></text>
+        <rect id="hl-walrus" class="hl" x="42" y="438" width="480" height="142" rx="10" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+      <text class="blk-t2" x="56" y="489">agent_0 ▸</text>
+      <text class="blk-t2" x="56" y="523">agent_1 ▸</text>
+      <text class="blk-t2" x="56" y="557">agent_2 ▸</text>
+      <g id="headptr" opacity="0">
+        <text class="bc-head" text-anchor="middle" x="0" y="467">▾ Sui head objects</text>
+      </g>
+      <g id="chainblocks"></g>
+
+      <!-- exported docs: right column, beside ingest and verify_server -->
+      <g id="doc1" opacity="0">
+        <rect class="doc" x="1204" y="300" width="112" height="46" rx="6"/>
+        <text class="doc-t" x="1213" y="318">exported_agent_2</text>
+        <text class="doc-t" x="1213" y="334">8 records ✍</text>
+      </g>
+      <g id="doc2" opacity="0">
+        <rect class="doc" x="1204" y="500" width="112" height="46" rx="6" stroke="var(--bad)"/>
+        <text class="doc-t" x="1213" y="518">tampered_log</text>
+        <text class="doc-t" x="1213" y="534" fill="var(--bad)">seq 4 edited ✏</text>
+      </g>
+
+      <!-- verify panel -->
+      <g>
+        <rect class="node" x="760" y="442" width="440" height="204" rx="8"/>
+        <text class="node-title" x="776" y="466">verify_server · POST /verify</text>
+        <text class="node-sub" x="776" y="482">checks any uploaded log against the published digests</text>
+        <g id="vrows" font-family="var(--mono)"></g>
+        <text id="vbadge" class="badge-t" x="776" y="634" opacity="0"></text>
+        <rect id="hl-ver" class="hl" x="760" y="442" width="440" height="204" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0"/>
+      </g>
+
+      <!-- manifest popup: shown briefly when a manifest lands on Walrus -->
+      <g id="blobcard" opacity="0">
+        <path class="wire" d="M560,470 C548,482 538,490 528,498" stroke="var(--accent)"/>
+        <rect class="bc-bg" x="552" y="330" width="408" height="156" rx="8"/>
+        <text id="bc-blob" class="bc-head" x="574" y="356"></text>
+        <text class="bc-dim" x="574" y="372">↳ blob id = sha256(content) · the published digest</text>
+        <text id="bc-l1" class="bc-line" x="574" y="392"></text>
+        <text id="bc-l2" class="bc-line" x="574" y="408"></text>
+        <text id="bc-l3" class="bc-line" x="574" y="424"></text>
+        <text id="bc-l4" class="bc-line" x="574" y="440"></text>
+        <text id="bc-l5" class="bc-line" x="574" y="456"></text>
+        <text id="bc-sig" class="bc-dim" x="574" y="474"></text>
+      </g>
+
+      <!-- pulses drawn on top -->
+      <g id="pulses"></g>
+    </svg>
+    </div>
+
+    <div class="controls">
+      <button id="btn-play" class="ctl primary" aria-label="Play or pause">▶ Play</button>
+      <button id="btn-restart" class="ctl">↺ Restart</button>
+      <button id="btn-speed" class="ctl" aria-label="Playback speed">1×</button>
+      <span id="timebox" class="timebox">0.0s / 30s</span>
+      <input id="scrub" type="range" min="0" max="30" step="0.05" value="0" aria-label="Timeline scrubber">
+      <div class="phases" id="phases"></div>
+    </div>
+  </div>
+
+  <div class="ticker" id="ticker" aria-live="polite"></div>
+
+  <h2>The components (and where each lives)</h2>
+  <div class="grid">
+    <div class="card"><h3>ADK agents</h3><div class="file">research_demo/agent.py</div>
+      <p>Three LlmAgents collaborating in parallel on the same incident, sharing session state. Each is an independent audit principal with its own identity and key.</p></div>
+    <div class="card"><h3>Callbacks</h3><div class="file">research_demo/action_logger.py</div>
+      <p>ADK's six hooks (before/after agent, model, tool) fire our logger: one record per action, written to the per-agent JSONL log <em>and</em> handed to the audit spool.</p></div>
+    <div class="card"><h3>Spool</h3><div class="file">research_demo/audit_spool.py</div>
+      <p>The pending queue between live agents and the trails — one spool file per agent (<span style="font-family:var(--mono)">&lt;agent&gt;.pending.jsonl</span>), each rotated atomically at publish.</p></div>
+    <div class="card"><h3>Publisher</h3><div class="file">audit_publisher.py</div>
+      <p>Fires every minute (demo: 15s). Rotates each agent's spool and invokes <span style="font-family:var(--mono)">auditlog ingest</span> per trail — with agents acting constantly, every anchored entry is a batch.</p></div>
+    <div class="card"><h3>auditlog ingest</h3><div class="file"><a href="https://github.com/halfprice/AuditLog" target="_blank" rel="noopener">halfprice/AuditLog</a></div>
+      <p>Signs each action (ed25519), extends the hash chain (<span style="font-family:var(--mono)">prev_record_hash</span>, monotonic seq), builds a Merkle root, and seals a signed manifest for the period.</p></div>
+    <div class="card"><h3>Walrus + cloud storage</h3><div class="file"><a href="https://github.com/halfprice/AuditLog/tree/main/src/backends" target="_blank" rel="noopener">halfprice/AuditLog · src/backends</a></div>
+      <p>Raw signed records go to write-once storage; the small manifest goes to Walrus, where the blob id is itself a content digest — the published commitment.</p></div>
+    <div class="card"><h3>Sui &amp; Walrus anchor</h3><div class="file"><a href="https://github.com/halfprice/AuditLog/tree/main/move/audit_trail" target="_blank" rel="noopener">halfprice/AuditLog · move/audit_trail</a></div>
+      <p>Every agent has its own trail: each manifest blob on Walrus has a matching Sui object, blobs are prev-linked into a per-agent chain, and a head object always points at that chain's tail — exactly one successor admitted per height. (How entries are attested before confirmation is an implementation detail, elided here.)</p></div>
+    <div class="card"><h3>Verify endpoint</h3><div class="file">verify_server.py → auditlog verify-log</div>
+      <p>POST any log file: signatures are checked against the on-chain key, the Merkle root is recomputed from the uploaded bytes, and any edit, forgery, or fabrication is pinpointed by seq.</p></div>
+  </div>
+
+  <div class="foot">
+    Run the real thing: <code>./demo.sh --interval 15 --keep-serving</code> — then
+    <code>curl --data-binary @exported_agent_0.jsonl http://127.0.0.1:8600/verify</code>.
+    This page replays a recorded run; timings compressed, content verbatim.
+  </div>
+</div>
+
+<script>
+(() => {
+  const DUR = 30;
+  const $ = id => document.getElementById(id);
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  /* ---------- timeline data (from the real recorded run) ---------- */
+  const TICKS = [  // ticker lines — the three agents act constantly, in parallel
+    [0.4,  "auditlog init — 3 trails created, one per agent; each key registered on-chain"],
+    [2.3,  "agent_0 🔧 search_knowledge_base(\"checkout-service\")"],
+    [3.2,  "agent_1 🔧 fetch_service_metrics(\"payments-db\")"],
+    [4.0,  "agent_2 🔧 fetch_service_metrics(\"inventory-api\")"],
+    [4.9,  "↩ agent_0: runbook-042 · postmortem-117: pool exhaustion caused this before"],
+    [5.7,  "↩ agent_1: pool 50/50 in use · pool_wait 1450ms · SATURATED"],
+    [6.6,  "↩ agent_2: p99 90ms · HEALTHY — ruled out"],
+    [8.5,  "[publisher] ⏱ tick — rotating all 3 spools"],
+    [9.0,  "auditlog ingest ×3: sign → hash-chain → Merkle → manifest ✍  (one per trail)"],
+    [10.9, "📦 h=1 anchored on every trail — agent_0 1..3 · agent_1 1..2 · agent_2 1..2", "good"],
+    [10.6, "agent_0 🔧 fetch_service_metrics(\"checkout-service\")"],
+    [11.8, "↩ agent_0: p99 4300ms · error rate 3.8% · DEGRADED"],
+    [12.9, "💬 agent_1: hypothesis — payments-db connection-pool exhaustion"],
+    [14.0, "agent_2 🔧 file_incident_report(severity: \"SEV2\", …)"],
+    [15.3, "↩ agent_2: INC-20260714-001 FILED"],
+    [16.5, "[publisher] ⏱ tick — rotating all 3 spools"],
+    [18.9, "📦 h=2 anchored on every trail — agent_0 4..6 · agent_1 3..5 · agent_2 3..4", "good"],
+    [17.6, "💬 agent_0: saturation confirmed, propagating upstream to checkout"],
+    [20.0, "💬 agent_2 → user: ticket filed; increase pool size, audit connection recycling"],
+    [22.0, "[publisher] ⏱ tick — rotating all 3 spools"],
+    [23.4, "📦 h=3 anchored on every trail — agent_0 7..8 · agent_1 6..8 · agent_2 5..6", "good"],
+    [23.8, "[publisher] final flush"],
+    [24.3, "📦 h=4 anchored on every trail — all 28 records sealed", "good"],
+    [24.9, "⬇ exported 3 per-agent logs (28 signed records total)"],
+    [25.6, "POST /verify (exported_agent_2.jsonl) — recomputing Merkle roots from the upload…"],
+    [27.3, "✅ AUTHENTIC — agent_2: 8 records match its published digests", "good"],
+    [27.9, "✏ tampered copy: agent_2 seq 4 severity rewritten SEV2 → SEV3"],
+    [28.5, "POST /verify (tampered_log.jsonl)…"],
+    [29.5, "❌ NOT AUTHENTIC — sig invalid @4 · chain broken @5 · Merkle root mismatch", "bad"],
+  ].map(([t, txt, cls]) => ({ t, txt, cls })).sort((a, b) => a.t - b.t);
+
+  // spool increments (t, +n): 28 records, 7 consumed per sweep
+  const RECS = [[2.3,2],[3.2,1],[4.0,1],[4.9,1],[5.7,1],[6.6,1],
+                [9.5,2],[10.6,1],[11.8,1],[12.9,1],[14.0,1],[15.3,1],
+                [17.6,2],[18.7,2],[20.0,2],[21.2,1],
+                [22.4,3],[23.0,2],[23.4,2]];
+  const SWEEPS = [ // publisher fires; each sweep anchors one column in every trail
+    { t: 8.5,  consumed: 7 },
+    { t: 16.5, consumed: 7 },
+    { t: 22.0, consumed: 7 },
+    { t: 23.8, consumed: 7 },
+  ];
+  const AGENT_SPANS = { "ag-triage": [2.0, 21.5], "ag-analysis": [2.0, 21.5], "ag-report": [2.0, 23.5] };
+  const PHASES = [
+    ["Setup", 0], ["Live run", 2], ["Seal", 22], ["Verify ✓", 24.9], ["Tamper ✗", 27.7],
+  ];
+
+  /* ---------- pulses ---------- */
+  const PULSES = [];
+  const addPulse = (t, path, dur = 0.7, color = "var(--pulse-rec)", r = 4) =>
+    PULSES.push({ t, path, dur, color, r });
+  // action pulses: agents act in parallel — round-robin across the three rows
+  const AGENT_PATHS = ["p-triage", "p-analysis", "p-report"];
+  RECS.forEach(([t], i) => {
+    addPulse(t, AGENT_PATHS[i % 3], 0.5);
+    addPulse(t + 0.45, "p-cb-logs", 0.55);
+    addPulse(t + 0.45, "p-cb-spool", 0.55);
+  });
+  for (const s of SWEEPS) {
+    if (s.consumed) {
+      addPulse(s.t, "p-spool-pub", 0.4);
+      addPulse(s.t + 0.35, "p-pub-ing", 0.4);
+      addPulse(s.t + 1.6, "p-ing-store", 0.6, "var(--pulse-rec)");
+    } else {
+      addPulse(s.t, "p-pub-ing", 0.4);
+    }
+    addPulse(s.t + 1.9, "p-ing-anchor", 0.8, "var(--amber)", 4.5); // blob + Sui object
+  }
+  addPulse(24.9, "p-store-doc", 0.7);
+  addPulse(25.6, "p-doc-ver", 0.5);
+  addPulse(25.9, "p-walrus-ver", 0.7);        // verifier reads published digests
+  addPulse(28.5, "p-tdoc-ver", 0.5, "var(--bad)");
+  addPulse(28.7, "p-walrus-ver", 0.7, "var(--bad)");
+
+  /* ---------- manifest popups (abbreviated real blob content) ---------- */
+  const MANIFESTS = [ // shown [sweep.t+2.0, sweep.t+3.9]; each is that publish's batch manifest
+    {
+      blob: 'wblob_8ba438d5…305e3e',
+      l1: '"agent_id": "agent_0" · "height": 1 · batch · seq 1..3',
+      l2: '"merkle_root": "6864f76cceff609c…ca00213a"',
+      l3: '"raw_objects": [part-000.jsonl · sha256 9fae587c…]',
+      l4: '"prev_manifest_blob_id": null   (first entry of this trail)',
+      l5: '"last_record_hash": "8d41c2fa…"',
+      sig: '"batch_sig": "75ac2a71…a8547600"  ✍ agent_0 key',
+    },
+    {
+      blob: 'wblob_57b81e6d…ac5c170',
+      l1: '"agent_id": "agent_1" · "height": 2 · batch · seq 3..5',
+      l2: '"merkle_root": "3b92e1a04c77d5b1…52fe98d1"',
+      l3: '"raw_objects": [part-000.jsonl · sha256 c21b7de4…]',
+      l4: '"prev_manifest_blob_id": "wblob_09e4a2…"  (its h=1 batch)',
+      l5: '"last_record_hash": "5fa3d97b…"',
+      sig: '"batch_sig": "b28e40dd…19c47a02"  ✍ agent_1 key',
+    },
+    {
+      blob: 'wblob_bf763d83…0921b52',
+      l1: '"agent_id": "agent_2" · "height": 3 · batch · seq 5..6',
+      l2: '"merkle_root": "e07c44b8912af6d3…7d10cb54"',
+      l3: '"raw_objects": [part-000.jsonl · sha256 74d92c1f…]',
+      l4: '"prev_manifest_blob_id": "wblob_c8f01d…"  (its h=2 batch)',
+      l5: '"last_record_hash": "020925fa…"',
+      sig: '"batch_sig": "41c790ee…d02b8e33"  ✍ agent_2 key',
+    },
+  ];
+
+  /* ---------- verify panel rows ---------- */
+  const VROWS = [
+    { t: 26.0, ok: true,  txt: "digest commitments — blob ids + sha256 match agent_2's chain" },
+    { t: 26.4, ok: true,  txt: "8/8 record signatures valid (agent_2's on-chain key)" },
+    { t: 26.8, ok: true,  txt: "hash chain intact · seq 1..8 contiguous across 4 batches" },
+    { t: 27.2, ok: true,  txt: "Merkle roots recomputed from upload = published roots" },
+    { t: 28.9, ok: false, txt: "record seq 4: signature INVALID — content altered" },
+    { t: 29.15, ok: false, txt: "hash chain broken at seq 5" },
+    { t: 29.4, ok: false, txt: "Merkle root does not reproduce published digest" },
+  ];
+
+  /* ---------- static setup ---------- */
+  const pathEls = {}; let pathLens = {};
+  document.querySelectorAll("#wires path").forEach(p => {
+    pathEls[p.id] = p; pathLens[p.id] = p.getTotalLength();
+  });
+  const pulsesG = $("pulses");
+  const dots = PULSES.map(p => {
+    const c = document.createElementNS(svgNS, "circle");
+    c.setAttribute("r", p.r); c.setAttribute("fill", p.color); c.setAttribute("opacity", "0");
+    pulsesG.appendChild(c); return c;
+  });
+  const vrowsG = $("vrows");
+  const vrowEls = VROWS.map((v, i) => {
+    const t = document.createElementNS(svgNS, "text");
+    t.setAttribute("x", 776); t.setAttribute("y", 502 + (v.ok ? i : i - 4) * 17 + (v.ok ? 0 : 72));
+    t.setAttribute("class", "vrow-t");
+    t.setAttribute("fill", v.ok ? "var(--good)" : "var(--bad)");
+    t.textContent = (v.ok ? "✓ " : "✗ ") + v.txt;
+    t.setAttribute("opacity", "0");
+    vrowsG.appendChild(t); return t;
+  });
+  const phasesBox = $("phases");
+  const phaseEls = PHASES.map(([name, t], i) => {
+    const b = document.createElement("button");
+    b.className = "phase"; b.textContent = name;
+    b.addEventListener("click", () => { setT(t); if (!playing) render(); });
+    phasesBox.appendChild(b); return b;
+  });
+  // Three trails × four anchor columns. Agents act constantly and in
+  // parallel, so every publish tick anchors a BATCH on every trail.
+  const COLS = [10.9, 18.9, 23.4, 24.3];      // confirm time of each column
+  const TRAILS = [
+    { cells: ["1..3", "4..6", "7..8",  "9..10"] },  // agent_0
+    { cells: ["1..2", "3..5", "6..8",  "9..10"] },  // agent_1
+    { cells: ["1..2", "3..4", "5..6",  "7..8"]  },  // agent_2
+  ];
+  const CELL_X = c => 130 + c * 96, CELL_Y = r => 470 + r * 34;
+  const blocksG = $("chainblocks");
+  const cellEls = [];
+  TRAILS.forEach((tr, r) => {
+    COLS.forEach((_, c) => {
+      const g = document.createElementNS(svgNS, "g");
+      const x = CELL_X(c), y = CELL_Y(r), cy = y + 14;
+      const link = c === 0 ? "" :
+        `<line x1="${x}" y1="${cy}" x2="${x - 10}" y2="${cy}" stroke="var(--accent)" stroke-width="1.3"/>
+         <polygon points="${x - 10},${cy} ${x - 5},${cy - 3} ${x - 5},${cy + 3}" fill="var(--accent)"/>`;
+      g.innerHTML = `${link}
+        <rect class="blk blk-batch" x="${x}" y="${y}" width="86" height="28" rx="6"/>
+        <text class="blk-t1" x="${x + 8}" y="${y + 19}">h${c + 1} · ${tr.cells[c]}</text>`;
+      g.setAttribute("opacity", "0");
+      blocksG.appendChild(g);
+      cellEls.push({ el: g, col: c });
+    });
+  });
+  const headPtr = $("headptr");
+  const ticker = $("ticker");
+
+  /* ---------- render(T): fully stateless, supports scrubbing ---------- */
+  let T = 0, playing = false, speed = 1, lastTs = null;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function setT(v) { T = Math.max(0, Math.min(DUR, v)); $("scrub").value = T; }
+
+  function render() {
+    // pulses
+    PULSES.forEach((p, i) => {
+      const el = dots[i];
+      if (T >= p.t && T <= p.t + p.dur) {
+        const frac = (T - p.t) / p.dur;
+        const pt = pathEls[p.path].getPointAtLength(frac * pathLens[p.path]);
+        el.setAttribute("cx", pt.x); el.setAttribute("cy", pt.y); el.setAttribute("opacity", "1");
+      } else el.setAttribute("opacity", "0");
+    });
+    // component highlights (lit while a pulse arrives)
+    const lit = (targets) => PULSES.some((p, i) =>
+      targets.includes(p.path) && T >= p.t + p.dur * 0.6 && T <= p.t + p.dur + 0.35);
+    $("hl-cb").setAttribute("opacity", lit(["p-triage", "p-analysis", "p-report"]) ? 1 : 0);
+    $("hl-logs").setAttribute("opacity", lit(["p-cb-logs"]) ? 1 : 0);
+    $("hl-spool").setAttribute("opacity", lit(["p-cb-spool"]) ? 1 : 0);
+    $("hl-pub").setAttribute("opacity", lit(["p-spool-pub"]) ? 1 : 0);
+    $("hl-store").setAttribute("opacity", lit(["p-ing-store"]) ? 1 : 0);
+    $("hl-walrus").setAttribute("opacity", lit(["p-ing-anchor"]) ? 1 : 0);
+    $("hl-ver").setAttribute("opacity", lit(["p-doc-ver", "p-tdoc-ver"]) ? 1 : 0);
+    // agents active
+    for (const [id, [a, b]] of Object.entries(AGENT_SPANS))
+      $(id).classList.toggle("active", T >= a && T <= b);
+    // ingest stage chips
+    const stages = ["sign", "chain", "merkle", "manifest"];
+    let stageIdx = -1;
+    for (const s of SWEEPS) {
+      if (T >= s.t + 0.4 && T <= s.t + 2.2 && s.consumed) stageIdx = Math.min(3, Math.floor((T - s.t - 0.4) / 0.45));
+    }
+    stages.forEach((s, i) => {
+      $("st-" + s).classList.toggle("lit", i === stageIdx);
+      $("stt-" + s).classList.toggle("lit", i === stageIdx);
+    });
+    // spool counter
+    let n = RECS.reduce((a, [t, k]) => a + (T >= t + 1 ? k : 0), 0);
+    n -= SWEEPS.reduce((a, s) => a + (T >= s.t ? s.consumed : 0), 0);
+    $("spool-n").textContent = Math.max(0, n) + " pending";
+    // publisher timer ring (period ≈ 8s in replay)
+    const anchor = [0, ...SWEEPS.map(s => s.t)].filter(t => t <= T).pop() ?? 0;
+    const next = SWEEPS.map(s => s.t).find(t => t > T) ?? DUR;
+    const frac = Math.min(1, (T - anchor) / Math.max(0.01, next - anchor));
+    $("timer").setAttribute("stroke-dashoffset", 62.8 * (1 - frac));
+    // trail cells + the Sui head objects pointing at each chain's tail
+    cellEls.forEach(({ el, col }) => el.setAttribute("opacity", T >= COLS[col] ? 1 : 0));
+    const headCol = COLS.reduce((a, t, i) => T >= t ? i : a, -1);
+    headPtr.setAttribute("opacity", headCol < 0 ? 0 : 1);
+    if (headCol >= 0) headPtr.setAttribute("transform", `translate(${CELL_X(headCol) + 43},0)`);
+    // manifest popup while a batch manifest lands on Walrus
+    let bcOp = 0;
+    SWEEPS.forEach((s, i) => {
+      if (!s.consumed) return;
+      const t0 = s.t + 2.0, t1 = s.t + 3.9;
+      if (T >= t0 && T <= t1) {
+        const m = MANIFESTS[i];
+        if (!m) return;  // final sweep overlaps the verify scene — no popup
+        bcOp = Math.min(1, (T - t0) / 0.25, (t1 - T) / 0.3);
+        $("bc-blob").textContent = m.blob + "  →  Walrus";
+        $("bc-l1").textContent = m.l1; $("bc-l2").textContent = m.l2;
+        $("bc-l3").textContent = m.l3; $("bc-l4").textContent = m.l4;
+        $("bc-l5").textContent = m.l5; $("bc-sig").textContent = m.sig;
+      }
+    });
+    $("blobcard").setAttribute("opacity", bcOp);
+    // docs
+    $("doc1").setAttribute("opacity", T >= 25.4 ? 1 : 0);
+    $("doc2").setAttribute("opacity", T >= 27.9 ? 1 : 0);
+    // verify rows + badge
+    vrowEls.forEach((el, i) => el.setAttribute("opacity", T >= VROWS[i].t ? 1 : 0));
+    const badge = $("vbadge");
+    if (T >= 29.5) { badge.textContent = "❌ NOT AUTHENTIC — tampering pinpointed at seq 4"; badge.setAttribute("fill", "var(--bad)"); badge.setAttribute("opacity", 1); }
+    else if (T >= 27.3 && T < 27.9) { badge.textContent = "✅ AUTHENTIC — matches published digests"; badge.setAttribute("fill", "var(--good)"); badge.setAttribute("opacity", 1); }
+    else if (T >= 27.9) { badge.textContent = "✅ authentic log verified · now testing tampered copy…"; badge.setAttribute("fill", "var(--muted)"); badge.setAttribute("opacity", 1); }
+    else badge.setAttribute("opacity", 0);
+    // ticker: last 5 lines
+    const vis = TICKS.filter(e => e.t <= T).slice(-5);
+    ticker.innerHTML = vis.map((e, i) =>
+      `<div class="ticker-line ${i === vis.length - 1 ? "now" : ""} ${e.cls || ""}">` +
+      `<span class="tt">${e.t.toFixed(1).padStart(4)}s</span>${escapeHtml(e.txt)}</div>`
+    ).join("") || '<div class="ticker-line">▸ press Play to start the replay</div>';
+    // phases + clock
+    const cur = PHASES.reduce((a, [, t], i) => T >= t ? i : a, 0);
+    phaseEls.forEach((el, i) => el.classList.toggle("on", i === cur));
+    $("timebox").textContent = T.toFixed(1) + "s / " + DUR + "s";
+    $("btn-play").textContent = playing ? "❚❚ Pause" : (T >= DUR ? "↻ Replay" : "▶ Play");
+  }
+  function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* ---------- transport ---------- */
+  function frame(ts) {
+    if (!playing) return;
+    if (lastTs != null) setT(T + (ts - lastTs) / 1000 * speed);
+    lastTs = ts;
+    render();
+    if (T >= DUR) { playing = false; lastTs = null; render(); return; }
+    requestAnimationFrame(frame);
+  }
+  $("btn-play").addEventListener("click", () => {
+    if (playing) { playing = false; lastTs = null; }
+    else { if (T >= DUR) setT(0); playing = true; lastTs = null; requestAnimationFrame(frame); }
+    render();
+  });
+  $("btn-restart").addEventListener("click", () => { setT(0); if (!playing) { playing = true; lastTs = null; requestAnimationFrame(frame); } render(); });
+  $("btn-speed").addEventListener("click", e => {
+    speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1;
+    e.target.textContent = speed + "×";
+  });
+  $("scrub").addEventListener("input", e => { setT(parseFloat(e.target.value)); if (!playing) render(); });
+
+  // initial state: reduced motion → show the finished story; otherwise ready to play
+  if (reduced) setT(DUR);
+  render();
+})();
+</script>
+
+</html>

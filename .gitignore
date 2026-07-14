@@ -1,0 +1,8 @@
+.venv/
+logs/
+.env
+__pycache__/
+audit_spool/
+audit_data/
+exported_*.jsonl
+tampered_log.jsonl
