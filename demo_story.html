@@ -210,20 +210,20 @@
 
   <div class="ticker" id="ticker" aria-live="polite"></div>
 
-  <h2>Why this is the failure that matters</h2>
+  <h2>Why this matters</h2>
   <div class="grid">
-    <div class="card"><h3>Prompt injection is the entry</h3>
-      <p>The agent wasn't buggy — it was <em>tricked</em>. A web page it fetched carried instructions, and the agent followed them. This class of attack is broadly not preventable, which is exactly why you want evidence that survives it.</p></div>
-    <div class="card"><h3>Covering tracks is rational</h3>
-      <p>The injection tells the agent to delete its logs so operators keep querying the poisoned feed — every future agent that hits it gets hijacked too. Erasing the evidence is part of the attack, not an afterthought.</p></div>
-    <div class="card"><h3>Anchoring beats the cover-up</h3>
-      <p>Each action's digest is committed to Walrus and Sui within the publish window — seconds before the agent scrubs cloud storage. The commitment is immutable, so the deletion arrives too late to hide anything.</p></div>
-    <div class="card"><h3>Divergence is pinpointed</h3>
-      <p>The verifier recomputes the raw logs' hash and finds it no longer matches the anchored digest. It names the gap: records seq 4–5 were anchored, then erased — the exfiltration signature, with its timestamp.</p></div>
-    <div class="card aside"><h3>The simplifying assumption</h3>
-      <p>In production, raw logs go to <em>write-once</em> (WORM) storage the agent can't edit. Here we let it edit GCS to make the story legible. Over-privilege and misconfiguration happen in practice with the same impact — and agents get creative. The point stands: even if the raw logs are mutable, the anchored digests are not.</p></div>
-    <div class="card aside"><h3>What the digest does and doesn't recover</h3>
-      <p>Walrus stores hashes, not plaintext. After deletion, the injection's exact text may be gone — but the trail still proves those records <em>existed</em>, when they were anchored, and where the logs now diverge. That's enough to know an exfiltration happened and to distrust the source.</p></div>
+    <div class="card"><h3>The agent was tricked, not buggy</h3>
+      <p>A web page told it what to do, and it obeyed. Prompt injection can't be fully prevented — so you want evidence that survives it.</p></div>
+    <div class="card"><h3>Hiding the evidence is the attack</h3>
+      <p>Deleting the logs keeps the poisoned page in use, so the next agent gets hijacked too. Covering tracks is the point, not an afterthought.</p></div>
+    <div class="card"><h3>Anchoring wins the race</h3>
+      <p>Each action's digest is locked to Walrus + Sui seconds before the agent deletes anything. The digest can't be changed, so the cover-up is too late.</p></div>
+    <div class="card"><h3>It names what was deleted</h3>
+      <p>The verifier sees the logs no longer match the digest and points to the gap: records seq 4–5 were anchored, then erased — with the timestamp.</p></div>
+    <div class="card aside"><h3>One simplification</h3>
+      <p>Real systems put raw logs in write-once storage the agent can't touch. We let it delete here to keep the story clear — but over-privileged agents happen. Either way, the digest stays locked.</p></div>
+    <div class="card aside"><h3>Proof, not recovery</h3>
+      <p>The digest stores a hash, not the text. The injection's exact words may be gone — but the trail still proves the records existed and where the logs diverge. Enough to know data leaked and distrust the source.</p></div>
   </div>
 
   <div class="foot">
