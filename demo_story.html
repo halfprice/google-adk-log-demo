@@ -135,7 +135,7 @@
 
   <div class="stage-panel">
     <div class="stage-scroll">
-    <svg id="stage" viewBox="0 0 1180 560" role="img" aria-label="Animated story: a browsing agent is prompt-injected, exfiltrates data, deletes its cloud-storage logs, and is caught by the anchored digest chain">
+    <svg id="stage" viewBox="0 0 1180 604" role="img" aria-label="Animated story: a browsing agent is prompt-injected, exfiltrates data, deletes its cloud-storage logs, and is caught by the anchored digest chain">
       <!-- wires -->
       <g>
         <path id="p-req"    class="wire" d="M212,120 L360,120"/>
@@ -171,8 +171,8 @@
       </g>
 
       <!-- GCS raw logs (mutable) -->
-      <text class="band" x="404" y="60">CLOUD STORAGE (GCS) · RAW LOGS</text>
-      <text class="tag" x="672" y="60" fill="var(--danger)" text-anchor="end">MUTABLE ⚠</text>
+      <text class="band" x="404" y="60">GCS · RAW LOGS</text>
+      <text class="tag" x="732" y="60" fill="var(--danger)" text-anchor="end">MUTABLE ⚠</text>
       <g>
         <rect class="node" x="404" y="72" width="336" height="360" rx="9"/>
         <g id="recs"></g>
@@ -180,7 +180,7 @@
       </g>
 
       <!-- Walrus + Sui anchored digests (immutable) -->
-      <text class="band" x="800" y="60">WALRUS ⛓ SUI · ANCHORED DIGESTS</text>
+      <text class="band" x="800" y="60">WALRUS ⛓ SUI · DIGESTS</text>
       <text class="tag" x="1140" y="60" fill="var(--amber)" text-anchor="end">🔒 IMMUTABLE</text>
       <g>
         <rect class="node" x="800" y="72" width="340" height="360" rx="9"/>
@@ -189,10 +189,11 @@
 
       <!-- Verifier -->
       <g id="verifier" opacity="0">
-        <rect class="node" x="404" y="452" width="736" height="96" rx="9" stroke="var(--danger)"/>
+        <rect class="node" x="404" y="452" width="736" height="144" rx="9" stroke="var(--danger)"/>
         <text class="node-title" x="420" y="474">Verifier — recompute the raw logs, compare to the anchored digests</text>
         <g id="vrows"></g>
-        <text id="verdict" class="verdict" x="1124" y="530" text-anchor="end" opacity="0"></text>
+        <line x1="420" y1="558" x2="1124" y2="558" stroke="var(--line)"/>
+        <text id="verdict" class="verdict" x="420" y="582" opacity="0"></text>
       </g>
 
       <g id="pulses"></g>
@@ -344,7 +345,7 @@
   const vrowsG = $("vrows");
   const vrowEls = VROWS.map((v, i) => {
     const t = document.createElementNS(svgNS, "text");
-    t.setAttribute("class", "vrow"); t.setAttribute("x", 420); t.setAttribute("y", 496 + i * 16);
+    t.setAttribute("class", "vrow"); t.setAttribute("x", 420); t.setAttribute("y", 498 + i * 18);
     t.setAttribute("fill", "var(--danger)"); t.setAttribute("opacity", "0");
     t.textContent = v.txt; vrowsG.appendChild(t); return t;
   });
