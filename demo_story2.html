@@ -244,7 +244,7 @@
     { t: 8,  cls: "danger", no: "ACT II", chip: "II · The incident",
       cap: 'A prompt injection makes the agent <b>leak data</b>. It tries to delete the logs — but they already left its control. <b>✋ blocked.</b>' },
     { t: 17, cls: "danger", no: "ACT III", chip: "III · The operator covers up",
-      cap: 'The operator, now liable, uses the cloud keys to <b>erase seq 4–5 from storage</b>. The raw logs look clean.' },
+      cap: 'The operator, now liable, uses the cloud keys to <b>erase seq 4–5 from storage</b> — days later, unhurried. The raw logs look clean.' },
     { t: 22, cls: "amber",  no: "ACT IV", chip: "IV · Why WORM isn’t enough",
       cap: 'The operator owns the storage <em>and</em> its lock. “Trust us, it’s write-once” is just their word — to an outsider. But the <b>digests are public.</b>' },
     { t: 26, cls: "amber",  no: "ACT V",  chip: "V · Anyone can check",
@@ -367,9 +367,14 @@
     });
     const noteOn = T >= 19.4;
     $("gcs-note").setAttribute("opacity", noteOn ? 1 : 0);
-    $("gcs-note").textContent = noteOn ? `rewritten ${COVER_CLOCK}, before the Q3 audit — seq 4–5 gone` : "";
+    $("gcs-note").textContent = noteOn ? `rewritten before the audit — seq 4–5 gone` : "";
 
     digEls.forEach((el, i) => el.setAttribute("opacity", T >= DIGS[i].at ? 1 : 0));
+
+    // dotted wires appear only once their target box is on stage
+    $("p-op").setAttribute("opacity", T >= 16.8 ? 1 : 0);
+    $("p-sv").setAttribute("opacity", T >= 26 ? 1 : 0);
+    $("p-wv").setAttribute("opacity", T >= 26 ? 1 : 0);
 
     // verifier
     $("verifier").setAttribute("opacity", T >= 26 ? 1 : 0);
