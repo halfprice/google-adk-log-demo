@@ -196,16 +196,16 @@
 
   <h2>Why this matters</h2>
   <div class="grid">
-    <div class="card"><h3>Two different threats</h3>
-      <p>A rogue agent hiding its actions is one problem. A dishonest operator rewriting history is another — and it's the harder one. This handles both.</p></div>
-    <div class="card"><h3>Logging lives outside the agent</h3>
-      <p>Each action is forwarded to an independent collector the instant it happens. A hijacked agent can't delete what it can't reach.</p></div>
+    <div class="card"><h3>The agent can't hide its actions</h3>
+      <p>Every action is logged outside the agent the instant it happens. Even hijacked, it can't delete what it can't reach — so the cover-up moves up the stack.</p></div>
+    <div class="card"><h3>The real risk is the operator</h3>
+      <p>Whoever holds the cloud keys can rewrite the raw logs later, unhurried — to bury an incident before an audit. That's the hard threat, and the one this is built for.</p></div>
     <div class="card"><h3>Write-once isn't proof to outsiders</h3>
-      <p>WORM storage stops insiders, but the operator owns the policy and can reset it. “We locked it” is not something a regulator can verify.</p></div>
+      <p>WORM storage stops insiders, but the operator owns the lock and can reset it. “We configured it right” is not something a regulator can verify.</p></div>
     <div class="card"><h3>The chain is public</h3>
       <p>Digests are anchored to Walrus + Sui, which the operator doesn't control and can't rewrite. That's the part no cloud config can fake.</p></div>
-    <div class="card"><h3>Anyone can verify</h3>
-      <p>A third party — auditor, regulator, counterparty — re-derives the digests from public sources, trusting neither the operator nor the cloud.</p></div>
+    <div class="card"><h3>Anyone can verify — trusting no one</h3>
+      <p>A third party — auditor, regulator, counterparty — re-derives the digests from public sources and pinpoints what was erased, trusting neither the operator nor the cloud.</p></div>
     <div class="card aside"><h3>The honest limit</h3>
       <p>The collector must sit on the agent's mandatory path — an egress proxy it can't skip. An agent that bypasses logging entirely can still act unseen; no audit system escapes that.</p></div>
   </div>
