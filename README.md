@@ -4,12 +4,15 @@ A local end-to-end demo of a Google ADK multi-agent pipeline where three
 agents collaborate on an incident investigation, and **every agent writes
 its own JSONL action log** (LLM calls, tool/RPC calls, results).
 
-**▶ [Security story](https://halfprice.github.io/google-adk-log-demo/demo_story.html)** —
-a browsing agent is prompt-injected into leaking data and deleting its logs;
-the anchored digest chain catches it. &nbsp;·&nbsp;
+**▶ [Security story](https://halfprice.github.io/google-adk-log-demo/demo_story2.html)** —
+logs live outside the agent and their digests are anchored to a public chain, so
+when an operator rewrites the raw logs to bury an incident, any third party can
+prove it. &nbsp;·&nbsp;
 **[System walkthrough](https://halfprice.github.io/google-adk-log-demo/demo_viz.html)** —
 a 30-second replay of the whole pipeline (agents → audit trails → verification).
-Both served from this repo via GitHub Pages.
+&nbsp;·&nbsp;
+[earlier story](https://halfprice.github.io/google-adk-log-demo/demo_story.html)
+(agent-only cover-up). All served from this repo via GitHub Pages.
 
 ## The pipeline
 
