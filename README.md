@@ -1,8 +1,9 @@
 # google-adk-log — multi-agent demo with per-agent action logs
 
-A local end-to-end demo of a Google ADK multi-agent pipeline where three
+A local, end-to-end demo of a Google ADK multi-agent pipeline where three
 agents collaborate on an incident investigation, and **every agent writes
-its own JSONL action log** (LLM calls, tool/RPC calls, results).
+its own JSONL action log** (LLM calls, tool/RPC calls, results) that is then
+anchored to a tamper-evident audit trail.
 
 **▶ [Security story](https://halfprice.github.io/google-adk-log-demo/demo_story2.html)** —
 logs live outside the agent and their digests are anchored to a public chain, so
